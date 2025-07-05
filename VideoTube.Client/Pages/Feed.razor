@@ -1,0 +1,373 @@
+@page "/"
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.IO
+
+<div class="video-feed">
+    <h3>@("Video List")</h3>
+
+    @if (videos == null)
+    {
+        <div class="loading">
+            <p>@("Loading...")</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error-state">
+            <p>@errorMessage</p>
+        </div>
+    }
+    else if (!videos.Any())
+    {
+        <div class="empty-state">
+            <p>@("No videos uploaded yet")</p>
+        </div>
+    }
+    else
+    {
+        <div class="video-grid">
+            @foreach (var video in videos)
+            {
+                <div class="video-post">
+                    <div class="video-container">
+                        <video controls preload="metadata">
+                            <source src="@video.Url" type="video/mp4" />
+                            @("Your browser does not support video.")
+                        </video>
+                    </div>
+                    <div class="video-info">
+                        <h4 class="video-title">@GetVideoTitle(video)</h4>
+                        <div class="video-meta">
+                            <p class="video-date">@video.UploadDate.ToString("dd.MM.yyyy HH:mm")</p>
+                            <p class="video-size">@FormatFileSize(video.Size)</p>
+                        </div>
+                        <div class="video-actions">
+                            <button class="btn btn-primary btn-sm" @onclick="() => DownloadVideo(video)">
+                                <span class="download-icon">⬇</span> @("Download")
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(video)" disabled="@deletingVideos.Contains(video.Url)">
+                                @if (deletingVideos.Contains(video.Url))
+                                {
+                                    <span class="loading-icon">⏳</span> @("Deleting...")
+                                }
+                                else
+                                {
+                                    <span class="delete-icon">🗑</span> @("Delete")
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .video-feed {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .video-feed h3 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+    }
+
+    .loading, .empty-state, .error-state {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+    }
+
+    .error-state {
+        color: #dc3545;
+    }
+
+    .video-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .video-post {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .video-post:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .video-container {
+        width: 100%;
+        background: #000;
+    }
+
+    .video-container video {
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        object-fit: cover;
+    }
+
+    .video-info {
+        padding: 20px;
+    }
+
+    .video-title {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333;
+        line-height: 1.4;
+    }
+
+    .video-meta {
+        margin: 0 0 15px 0;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .video-date, .video-size {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .video-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+        transform: translateY(-1px);
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .download-icon, .delete-icon, .loading-icon {
+        font-size: 1rem;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Mobile styles */
+    @@media (max-width: 768px) {
+        .video-feed {
+            padding: 10px;
+        }
+        
+        .video-info {
+            padding: 15px;
+        }
+        
+        .video-title {
+            font-size: 1.1rem;
+        }
+        
+        .video-actions {
+            flex-direction: column;
+        }
+        
+        .btn {
+            justify-content: center;
+        }
+    }
+</style>
+
+@code {
+    private List<VideoInfo> videos = new();
+    private string errorMessage;
+    private HashSet<string> deletingVideos = new();
+
+    public class VideoInfo
+    {
+        public string Url { get; set; }
+        public string FileName { get; set; }
+        public string OriginalName { get; set; }
+        public long Size { get; set; }
+        public string ContentType { get; set; }
+        public DateTime UploadDate { get; set; }
+        public DateTime LastModified { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var videoList = await Http.GetFromJsonAsync<List<VideoInfo>>("video/list");
+            if (videoList != null)
+            {
+                videos = videoList;
+            }
+        }
+        catch
+        {
+            videos = new List<VideoInfo>();
+            errorMessage = "Error loading video list";
+        }
+    }
+
+    private string GetVideoTitle(VideoInfo video)
+    {
+        // Use original name if available, otherwise extract from filename
+        if (!string.IsNullOrEmpty(video.OriginalName))
+        {
+            return Path.GetFileNameWithoutExtension(video.OriginalName);
+        }
+        
+        var fileName = Path.GetFileNameWithoutExtension(video.FileName);
+        if (string.IsNullOrEmpty(fileName))
+            return "Untitled";
+        
+        // Replace underscores and dashes with spaces
+        return fileName.Replace('_', ' ').Replace('-', ' ');
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task DownloadVideo(VideoInfo video)
+    {
+        try
+        {
+            // Use filename for download
+            var fileName = video.FileName;
+            if (string.IsNullOrEmpty(fileName))
+                return;
+
+            // Create download URL
+            var downloadUrl = $"http://localhost:5081/api/video/download/{fileName}";
+            
+            // Call JavaScript function for download
+            await JS.InvokeVoidAsync("downloadFile", downloadUrl, fileName);
+        }
+        catch (Exception ex)
+        {
+            // In case of error, we can show notification
+            Console.WriteLine($"Download error: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete(VideoInfo video)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete video '{GetVideoTitle(video)}'?");
+        
+        if (confirmed)
+        {
+            await DeleteVideo(video);
+        }
+    }
+
+    private async Task DeleteVideo(VideoInfo video)
+    {
+        try
+        {
+            // Add video to deleting list
+            deletingVideos.Add(video.Url);
+            StateHasChanged();
+
+            // Use filename for deletion
+            var fileName = video.FileName;
+            if (string.IsNullOrEmpty(fileName))
+                return;
+
+            // Send delete request
+            var response = await Http.DeleteAsync($"video/delete/{fileName}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Remove video from local list
+                videos.Remove(video);
+                
+                // Also update list from server for synchronization
+                try
+                {
+                    var updatedVideos = await Http.GetFromJsonAsync<List<VideoInfo>>("video/list");
+                    if (updatedVideos != null)
+                    {
+                        videos = updatedVideos;
+                    }
+                }
+                catch
+                {
+                    // If failed to update from server, use local deletion
+                }
+                
+                // Clear error message if it was set
+                errorMessage = null;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Delete error: {response.StatusCode} - {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Delete error: {ex.Message}";
+        }
+        finally
+        {
+            // Remove video from deleting list
+            deletingVideos.Remove(video.Url);
+            StateHasChanged();
+        }
+    }
+}

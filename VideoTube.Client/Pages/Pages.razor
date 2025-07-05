@@ -1,0 +1,442 @@
+@page "/upload"
+@inject HttpClient Http
+
+<div class="upload-page">
+    <h3>Загрузка видео</h3>
+    
+    <div class="upload-container">
+        <div class="upload-area">
+            <InputFile OnChange="HandleMultipleFiles" accept="video/*" multiple class="file-input" />
+            <div class="upload-text">
+                <p>Выберите один или несколько видеофайлов для загрузки</p>
+                <small>Поддерживаемые форматы: MP4, AVI, MOV, MKV. Можно выбрать несколько файлов.</small>
+            </div>
+        </div>
+        
+        @if (uploadResults.Any())
+        {
+            <div class="upload-results">
+                <div class="results-header">
+                    <h4>Результаты загрузки</h4>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearResults">
+                        Очистить
+                    </button>
+                </div>
+                <div class="results-summary">
+                    <p>Всего файлов: @uploadResults.Count</p>
+                    <p>Успешно: @uploadResults.Count(r => r.IsSuccess)</p>
+                    <p>Ошибок: @uploadResults.Count(r => !r.IsSuccess)</p>
+                </div>
+                
+                @foreach (var result in uploadResults)
+                {
+                    <div class="upload-result @(result.IsSuccess ? "success" : "error")">
+                        <div class="result-header">
+                            <span class="result-icon">@(result.IsSuccess ? "✅" : "❌")</span>
+                            <span class="file-name">@result.FileName</span>
+                        </div>
+                        @if (result.IsSuccess)
+                        {
+                            <div class="result-details">
+                                <a href="@result.Url" target="_blank" class="video-link">Открыть видео</a>
+                                <span class="file-size">@FormatFileSize(result.FileSize)</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="error-message">@result.ErrorMessage</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">
+                <p>❌ @errorMessage</p>
+            </div>
+        }
+
+        @if (isUploading)
+        {
+            <div class="upload-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: @(uploadProgress)%"></div>
+                </div>
+                <p>Загрузка... @uploadProgress%</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .upload-page {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .upload-page h3 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+    }
+
+    .upload-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        transition: border-color 0.3s ease;
+        margin-bottom: 20px;
+    }
+
+    .upload-area:hover {
+        border-color: #007bff;
+    }
+
+    .file-input {
+        margin-bottom: 20px;
+    }
+
+    .upload-text p {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .upload-text small {
+        color: #666;
+    }
+
+    .upload-results {
+        margin-top: 30px;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .results-header h4 {
+        margin: 0;
+        color: #333;
+    }
+
+    .btn-outline-secondary {
+        background: transparent;
+        border: 1px solid #6c757d;
+        color: #6c757d;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #6c757d;
+        color: white;
+    }
+
+    .results-summary {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .results-summary p {
+        margin: 0;
+        font-weight: 500;
+        color: #666;
+    }
+
+    .upload-result {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+
+    .upload-result.success {
+        border-color: #c3e6cb;
+        background: #f8fff9;
+    }
+
+    .upload-result.error {
+        border-color: #f5c6cb;
+        background: #fff8f8;
+    }
+
+    .result-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .result-icon {
+        font-size: 1.2rem;
+    }
+
+    .file-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .result-details {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .video-link {
+        display: inline-block;
+        background: #007bff;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .video-link:hover {
+        background: #0056b3;
+        text-decoration: none;
+        color: white;
+    }
+
+    .file-size {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .error-message {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .error-message p {
+        margin: 0;
+        color: #721c24;
+    }
+
+    .upload-progress {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #0056b3);
+        transition: width 0.3s ease;
+    }
+
+    .upload-progress p {
+        margin: 0;
+        color: #666;
+        font-weight: 500;
+    }
+
+    @@media (max-width: 768px) {
+        .upload-page {
+            padding: 10px;
+        }
+        
+        .upload-container {
+            padding: 20px;
+        }
+        
+        .upload-area {
+            padding: 30px 20px;
+        }
+        
+        .results-summary {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .result-details {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+
+@code {
+    private List<UploadResult> uploadResults = new();
+    private string errorMessage;
+    private bool isUploading;
+    private int uploadProgress;
+
+    public class UploadResult
+    {
+        public string FileName { get; set; }
+        public string Url { get; set; }
+        public long FileSize { get; set; }
+        public bool IsSuccess { get; set; }
+        public string ErrorMessage { get; set; }
+    }
+
+    public class UploadResponse
+    {
+        public List<UploadedFileInfo> UploadedFiles { get; set; }
+        public List<string> Errors { get; set; }
+        public int TotalFiles { get; set; }
+        public int SuccessCount { get; set; }
+        public int ErrorCount { get; set; }
+        public long TotalSize { get; set; }
+    }
+
+    public class UploadedFileInfo
+    {
+        public string OriginalName { get; set; }
+        public string Url { get; set; }
+        public long Size { get; set; }
+        public string FileName { get; set; }
+        public string ContentType { get; set; }
+    }
+
+    private async Task HandleMultipleFiles(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            errorMessage = null;
+            uploadResults.Clear();
+            isUploading = true;
+            uploadProgress = 0;
+            StateHasChanged();
+
+            var files = e.GetMultipleFiles();
+            if (!files.Any())
+            {
+                errorMessage = "Файлы не выбраны";
+                return;
+            }
+
+            var content = new MultipartFormDataContent();
+            var totalFiles = files.Count();
+            var currentFile = 0;
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var stream = file.OpenReadStream(maxAllowedSize: 524288000); // 500MB limit
+                    content.Add(new StreamContent(stream), "files", file.Name);
+                    
+                    currentFile++;
+                    uploadProgress = (int)((double)currentFile / totalFiles * 100);
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    uploadResults.Add(new UploadResult
+                    {
+                        FileName = file.Name,
+                        IsSuccess = false,
+                        ErrorMessage = $"Ошибка при подготовке файла: {ex.Message}"
+                    });
+                }
+            }
+
+            var response = await Http.PostAsync("video/upload-multiple", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                
+                // Обрабатываем успешно загруженные файлы
+                if (result?.UploadedFiles != null)
+                {
+                    foreach (var uploadedFile in result.UploadedFiles)
+                    {
+                        uploadResults.Add(new UploadResult
+                        {
+                            FileName = uploadedFile.OriginalName,
+                            Url = uploadedFile.Url,
+                            FileSize = uploadedFile.Size,
+                            IsSuccess = true
+                        });
+                    }
+                }
+
+                // Обрабатываем ошибки
+                if (result?.Errors != null)
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        uploadResults.Add(new UploadResult
+                        {
+                            FileName = "Неизвестный файл",
+                            IsSuccess = false,
+                            ErrorMessage = error
+                        });
+                    }
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Ошибка сервера: {response.StatusCode} - {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+            uploadProgress = 100;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private void ClearResults()
+    {
+        uploadResults.Clear();
+        errorMessage = null;
+        StateHasChanged();
+    }
+}
