@@ -361,3 +361,11 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# VideoTube specific ignores
+# Ignore contents of videos directory but keep the directory structure
+VideoTube.Server/wwwroot/videos/*
+!VideoTube.Server/wwwroot/videos/.gitkeep
+
+# Ignore SQLite database
+VideoTube.Server/videotube.db

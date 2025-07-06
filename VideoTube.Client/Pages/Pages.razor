@@ -1,80 +1,131 @@
 @page "/upload"
+@using VideoTube.Client.Services
 @inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
-<div class="upload-page">
-    <h3>Загрузка видео</h3>
-    
-    <div class="upload-container">
-        <div class="upload-area">
-            <InputFile OnChange="HandleMultipleFiles" accept="video/*" multiple class="file-input" />
-            <div class="upload-text">
-                <p>Выберите один или несколько видеофайлов для загрузки</p>
-                <small>Поддерживаемые форматы: MP4, AVI, MOV, MKV. Можно выбрать несколько файлов.</small>
+<PageTitle>Upload Video</PageTitle>
+
+@* Закомментировано для отключения авторизации *@
+@* @if (!AuthService.IsAuthenticated) *@
+@* { *@
+@*     <div class="container mt-5"> *@
+@*         <div class="row justify-content-center"> *@
+@*             <div class="col-md-6"> *@
+@*                 <div class="card"> *@
+@*                     <div class="card-body text-center"> *@
+@*                         <h4 class="card-title">Authentication Required</h4> *@
+@*                         <p class="card-text">You need to be signed in to upload videos.</p> *@
+@*                         <button class="btn btn-primary" @onclick="Login">Sign in with Google</button> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+@* else *@
+@* { *@
+    <div class="upload-page">
+        <div class="user-info">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    @* Закомментировано для отключения авторизации *@
+                    @* @if (!string.IsNullOrEmpty(AuthService.CurrentUser?.Picture)) *@
+                    @* { *@
+                    @*     <img src="@AuthService.CurrentUser.Picture" alt="Profile" class="rounded-circle me-3" style="width: 48px; height: 48px;" /> *@
+                    @* } *@
+                    <div>
+                        <h4 class="mb-1">Demo Mode - Upload Videos</h4>
+                        <p class="text-muted mb-0">Authorization disabled</p>
+                    </div>
+                </div>
+                @* Закомментировано для отключения авторизации *@
+                @* <button class="btn btn-outline-danger" @onclick="Logout">Logout</button> *@
             </div>
         </div>
-        
-        @if (uploadResults.Any())
-        {
-            <div class="upload-results">
-                <div class="results-header">
-                    <h4>Результаты загрузки</h4>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearResults">
-                        Очистить
-                    </button>
-                </div>
-                <div class="results-summary">
-                    <p>Всего файлов: @uploadResults.Count</p>
-                    <p>Успешно: @uploadResults.Count(r => r.IsSuccess)</p>
-                    <p>Ошибок: @uploadResults.Count(r => !r.IsSuccess)</p>
-                </div>
-                
-                @foreach (var result in uploadResults)
-                {
-                    <div class="upload-result @(result.IsSuccess ? "success" : "error")">
-                        <div class="result-header">
-                            <span class="result-icon">@(result.IsSuccess ? "✅" : "❌")</span>
-                            <span class="file-name">@result.FileName</span>
-                        </div>
-                        @if (result.IsSuccess)
-                        {
-                            <div class="result-details">
-                                <a href="@result.Url" target="_blank" class="video-link">Открыть видео</a>
-                                <span class="file-size">@FormatFileSize(result.FileSize)</span>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="error-message">@result.ErrorMessage</div>
-                        }
-                    </div>
-                }
-            </div>
-        }
-        
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="error-message">
-                <p>❌ @errorMessage</p>
-            </div>
-        }
 
-        @if (isUploading)
-        {
-            <div class="upload-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: @(uploadProgress)%"></div>
+        <h3>Загрузка видео</h3>
+        
+        <div class="upload-container">
+            <div class="upload-area">
+                <InputFile OnChange="HandleMultipleFiles" accept="video/*" multiple class="file-input" />
+                <div class="upload-text">
+                    <p>Выберите один или несколько видеофайлов для загрузки</p>
+                    <small>Поддерживаемые форматы: MP4, AVI, MOV, MKV. Можно выбрать несколько файлов.</small>
                 </div>
-                <p>Загрузка... @uploadProgress%</p>
             </div>
-        }
+            
+            @if (uploadResults.Any())
+            {
+                <div class="upload-results">
+                    <div class="results-header">
+                        <h4>Результаты загрузки</h4>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ClearResults">
+                            Очистить
+                        </button>
+                    </div>
+                    <div class="results-summary">
+                        <p>Всего файлов: @uploadResults.Count</p>
+                        <p>Успешно: @uploadResults.Count(r => r.IsSuccess)</p>
+                        <p>Ошибок: @uploadResults.Count(r => !r.IsSuccess)</p>
+                    </div>
+                    
+                    @foreach (var result in uploadResults)
+                    {
+                        <div class="upload-result @(result.IsSuccess ? "success" : "error")">
+                            <div class="result-header">
+                                <span class="result-icon">@(result.IsSuccess ? "✅" : "❌")</span>
+                                <span class="file-name">@result.FileName</span>
+                            </div>
+                            @if (result.IsSuccess)
+                            {
+                                <div class="result-details">
+                                    <a href="@result.Url" target="_blank" class="video-link">Открыть видео</a>
+                                    <span class="file-size">@FormatFileSize(result.FileSize)</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="error-message">@result.ErrorMessage</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-message">
+                    <p>❌ @errorMessage</p>
+                </div>
+            }
+
+            @if (isUploading)
+            {
+                <div class="upload-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: @(uploadProgress)%"></div>
+                    </div>
+                    <p>Загрузка... @uploadProgress%</p>
+                </div>
+            }
+        </div>
     </div>
-</div>
+@* } *@
 
 <style>
     .upload-page {
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;
+    }
+
+    .user-info {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 30px;
     }
 
     .upload-page h3 {
@@ -295,6 +346,22 @@
     private string errorMessage;
     private bool isUploading;
     private int uploadProgress;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+    }
+
+    private async Task Login()
+    {
+        await AuthService.LoginAsync();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
 
     public class UploadResult
     {

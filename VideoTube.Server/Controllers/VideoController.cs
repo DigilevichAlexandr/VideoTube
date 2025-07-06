@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using VideoTube.Server.Models;
+using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -9,12 +11,14 @@ public class VideoController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<VideoController> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly VideoTubeDbContext _db;
 
-    public VideoController(IWebHostEnvironment env, ILogger<VideoController> logger, IHttpContextAccessor httpContextAccessor)
+    public VideoController(IWebHostEnvironment env, ILogger<VideoController> logger, IHttpContextAccessor httpContextAccessor, VideoTubeDbContext db)
     {
         _env = env;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
+        _db = db;
     }
 
     [HttpPost("upload")]
@@ -249,6 +253,43 @@ public class VideoController : ControllerBase
             _logger.LogError(ex, "Error deleting file");
             return StatusCode(500, "Error deleting file");
         }
+    }
+
+    [HttpPost("like/{videoFileName}")]
+    public async Task<IActionResult> Like(string videoFileName)
+    {
+        if (string.IsNullOrWhiteSpace(videoFileName))
+            return BadRequest("Invalid video file name");
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var exists = await _db.Likes.AnyAsync(l => l.VideoFileName == videoFileName && l.IP == ip);
+        if (exists)
+            return Ok(new { success = false, message = "Already liked" });
+
+        var like = new Like { VideoFileName = videoFileName, IP = ip };
+        _db.Likes.Add(like);
+        await _db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
+
+    [HttpPost("unlike/{videoFileName}")]
+    public async Task<IActionResult> Unlike(string videoFileName)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var like = await _db.Likes.FirstOrDefaultAsync(l => l.VideoFileName == videoFileName && l.IP == ip);
+        if (like != null)
+        {
+            _db.Likes.Remove(like);
+            await _db.SaveChangesAsync();
+        }
+        return Ok(new { success = true });
+    }
+
+    [HttpGet("likes/{videoFileName}")]
+    public async Task<IActionResult> GetLikes(string videoFileName)
+    {
+        var count = await _db.Likes.CountAsync(l => l.VideoFileName == videoFileName);
+        return Ok(new { count });
     }
 
     private string GetContentType(string extension)

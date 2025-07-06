@@ -56,6 +56,9 @@
                                     <span class="delete-icon">🗑</span> @("Delete")
                                 }
                             </button>
+                            <button class="btn btn-outline-success btn-sm" @onclick="() => ToggleLike(video)" disabled="@likeLoading.Contains(video.FileName)">
+                                <span class="like-icon">👍</span> @GetLikeCount(video.FileName)
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -225,6 +228,8 @@
     private List<VideoInfo> videos = new();
     private string errorMessage;
     private HashSet<string> deletingVideos = new();
+    private Dictionary<string, int> likeCounts = new();
+    private HashSet<string> likeLoading = new();
 
     public class VideoInfo
     {
@@ -245,6 +250,10 @@
             if (videoList != null)
             {
                 videos = videoList;
+                foreach (var v in videos)
+                {
+                    await LoadLikeCount(v.FileName);
+                }
             }
         }
         catch
@@ -256,7 +265,6 @@
 
     private string GetVideoTitle(VideoInfo video)
     {
-        // Use original name if available, otherwise extract from filename
         if (!string.IsNullOrEmpty(video.OriginalName))
         {
             return Path.GetFileNameWithoutExtension(video.OriginalName);
@@ -266,7 +274,6 @@
         if (string.IsNullOrEmpty(fileName))
             return "Untitled";
         
-        // Replace underscores and dashes with spaces
         return fileName.Replace('_', ' ').Replace('-', ' ');
     }
 
@@ -287,20 +294,16 @@
     {
         try
         {
-            // Use filename for download
             var fileName = video.FileName;
             if (string.IsNullOrEmpty(fileName))
                 return;
 
-            // Create download URL
             var downloadUrl = $"http://localhost:5081/api/video/download/{fileName}";
             
-            // Call JavaScript function for download
             await JS.InvokeVoidAsync("downloadFile", downloadUrl, fileName);
         }
         catch (Exception ex)
         {
-            // In case of error, we can show notification
             Console.WriteLine($"Download error: {ex.Message}");
         }
     }
@@ -319,24 +322,19 @@
     {
         try
         {
-            // Add video to deleting list
             deletingVideos.Add(video.Url);
             StateHasChanged();
 
-            // Use filename for deletion
             var fileName = video.FileName;
             if (string.IsNullOrEmpty(fileName))
                 return;
 
-            // Send delete request
             var response = await Http.DeleteAsync($"video/delete/{fileName}");
             
             if (response.IsSuccessStatusCode)
             {
-                // Remove video from local list
                 videos.Remove(video);
                 
-                // Also update list from server for synchronization
                 try
                 {
                     var updatedVideos = await Http.GetFromJsonAsync<List<VideoInfo>>("video/list");
@@ -350,7 +348,6 @@
                     // If failed to update from server, use local deletion
                 }
                 
-                // Clear error message if it was set
                 errorMessage = null;
             }
             else
@@ -365,9 +362,52 @@
         }
         finally
         {
-            // Remove video from deleting list
             deletingVideos.Remove(video.Url);
             StateHasChanged();
         }
     }
+
+    private async Task LoadLikeCount(string fileName)
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<LikeCountResult>($"video/likes/{fileName}");
+            if (result != null)
+                likeCounts[fileName] = result.count;
+        }
+        catch { likeCounts[fileName] = 0; }
+        StateHasChanged();
+    }
+
+    private int GetLikeCount(string fileName)
+    {
+        return likeCounts.TryGetValue(fileName, out var count) ? count : 0;
+    }
+
+    private async Task ToggleLike(VideoInfo video)
+    {
+        var fileName = video.FileName;
+        if (string.IsNullOrEmpty(fileName)) return;
+        likeLoading.Add(fileName);
+        StateHasChanged();
+        try
+        {
+            if (GetLikeCount(fileName) > 0)
+            {
+                await Http.PostAsync($"video/unlike/{fileName}", null);
+            }
+            else
+            {
+                await Http.PostAsync($"video/like/{fileName}", null);
+            }
+            await LoadLikeCount(fileName);
+        }
+        finally
+        {
+            likeLoading.Remove(fileName);
+            StateHasChanged();
+        }
+    }
+
+    public class LikeCountResult { public int count { get; set; } }
 }

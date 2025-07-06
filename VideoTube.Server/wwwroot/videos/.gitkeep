@@ -1,0 +1,2 @@
+# This file ensures that the videos directory is tracked by Git
+# even when it's empty. Uploaded videos will be ignored by .gitignore 

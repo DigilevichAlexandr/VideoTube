@@ -1,7 +1,80 @@
 @page "/home"
+@using VideoTube.Client.Services
+@inject AuthService AuthService
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-4">
+    @* Закомментировано для отключения авторизации *@
+    @* @if (AuthService.IsAuthenticated && AuthService.CurrentUser != null) *@
+    @* { *@
+    @*     <div class="row"> *@
+    @*         <div class="col-md-12"> *@
+    @*             <div class="card"> *@
+    @*                 <div class="card-body"> *@
+    @*                     <div class="d-flex align-items-center"> *@
+    @*                         @if (!string.IsNullOrEmpty(AuthService.CurrentUser.Picture)) *@
+    @*                         { *@
+    @*                             <img src="@AuthService.CurrentUser.Picture" alt="Profile" class="rounded-circle me-3" style="width: 64px; height: 64px;" /> *@
+    @*                         } *@
+    @*                         <div> *@
+    @*                             <h4 class="mb-1">Welcome, @AuthService.CurrentUser.Name!</h4> *@
+    @*                             <p class="text-muted mb-0">@AuthService.CurrentUser.Email</p> *@
+    @*                         </div> *@
+    @*                         <button class="btn btn-outline-danger ms-auto" @onclick="Logout">Logout</button> *@
+    @*                     </div> *@
+    @*                 </div> *@
+    @*             </div> *@
+    @*         </div> *@
+    @*     </div> *@
+    @* } *@
+    @* else *@
+    @* { *@
+    @*     <div class="row justify-content-center"> *@
+    @*         <div class="col-md-6"> *@
+    @*             <div class="card"> *@
+    @*                 <div class="card-body text-center"> *@
+    @*                     <h4 class="card-title">Welcome to VideoTube</h4> *@
+    @*                     <p class="card-text">Please sign in to continue.</p> *@
+    @*                     <button class="btn btn-primary" @onclick="Login"> *@
+    @*                         <i class="fab fa-google me-2"></i>Sign in with Google *@
+    @*                     </button> *@
+    @*                 </div> *@
+    @*             </div> *@
+    @*         </div> *@
+    @*     </div> *@
+    @* } *@
+    
+    @* Показываем приветствие для демо пользователя *@
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <h4 class="mb-1">Welcome to VideoTube!</h4>
+                            <p class="text-muted mb-0">Demo mode - Authorization disabled</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-Welcome to your new app.
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+    }
+
+    private async Task Login()
+    {
+        await AuthService.LoginAsync();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+    }
+}

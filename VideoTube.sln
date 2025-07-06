@@ -1,11 +1,12 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoTube.Server", "VideoTube.Server\VideoTube.Server.csproj", "{6ABB4542-5EBE-47D1-8655-BD0A778E595C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoTube.Client", "VideoTube.Client\VideoTube.Client.csproj", "{5B3C23BB-D5FB-4145-BFAC-D896740663BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoTube.Shared", "VideoTube.Shared\VideoTube.Shared.csproj", "{8C9D1234-5678-90AB-CDEF-123456789ABC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +42,18 @@ Global
 		{5B3C23BB-D5FB-4145-BFAC-D896740663BF}.Release|x64.Build.0 = Release|Any CPU
 		{5B3C23BB-D5FB-4145-BFAC-D896740663BF}.Release|x86.ActiveCfg = Release|Any CPU
 		{5B3C23BB-D5FB-4145-BFAC-D896740663BF}.Release|x86.Build.0 = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|x64.Build.0 = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Debug|x86.Build.0 = Debug|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|x64.ActiveCfg = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|x64.Build.0 = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|x86.ActiveCfg = Release|Any CPU
+		{8C9D1234-5678-90AB-CDEF-123456789ABC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
